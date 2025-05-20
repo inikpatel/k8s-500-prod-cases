@@ -1,23 +1,23 @@
-## 📘 Scenario #1: Zombie Pods Causing `kubectl drain` to Hang
+## 📘 Scenario #1: Zombie Pods Causing NodeDrain to Hang
 
 - **Category**: Cluster Management  
-- **Environment**: Kubernetes v1.23, On-prem Bare Metal, Systemd cgroups  
+- **Environment**: K8s v1.23, On-prem bare metal, Systemd cgroups  
 
-### 🧩 Scenario Summary
-`kubectl drain` stuck indefinitely due to an unresponsive terminating pod.
+### Scenario Summary
+Node drain stuck indefinitely due to unresponsive terminating pod.
 
-### 🔍 What Happened
-A pod with a custom finalizer never completed termination, which blocked the `kubectl drain` command. Although the pod was marked for deletion, the API server continued waiting because the finalizer was not removed.
+### What Happened
+A pod with a custom finalizer never completed termination, blocking `kubectl drain`. Even after the pod was marked for deletion, the API server kept waiting because the finalizer wasn’t removed.
 
-### 🧪 Diagnosis Steps
-- Ran `kubectl get pods --all-namespaces -o wide` to identify lingering pods.
-- Found a pod stuck in the `Terminating` state for over 20 minutes.
-- Used `kubectl describe pod <pod>` and discovered a custom finalizer.
-- Checked logs of the controller managing the finalizer — the controller had crashed.
+### Diagnosis Steps
+- Checked `kubectl get pods --all-namespaces -o wide` to find lingering pods.
+- Found pod stuck in `Terminating` state for over 20 minutes.
+- Used `kubectl describe pod <pod>` to identify the presence of a custom finalizer.
+- Investigated controller logs managing the finalizer – the controller had crashed.
 
-### 🚨 Root Cause
-Finalizer logic was not executed because the controller responsible for it was down, leaving the pod in an undeletable state.
+### Root Cause
+Finalizer logic was never executed because its controller was down, leaving the pod undeletable.
 
-### 🛠️ Fix / Workaround
+### Fix/Workaround
 ```bash
 kubectl patch pod <pod-name> -p '{"metadata":{"finalizers":[]}}' --type=merge
